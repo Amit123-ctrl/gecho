@@ -630,6 +630,39 @@ class PostService {
     }
   }
 
+  // Toggle like on global post (for posts collection)
+  Future<String?> toggleLikeOnPost(String postId, String currentUserId) async {
+    try {
+      final postRef = _firestore.collection('posts').doc(postId);
+      
+      await _firestore.runTransaction((transaction) async {
+        final postDoc = await transaction.get(postRef);
+        
+        if (!postDoc.exists) {
+          throw Exception('Post not found');
+        }
+        
+        final data = postDoc.data()!;
+        List<String> likes = List<String>.from(data['likes'] ?? []);
+        
+        if (likes.contains(currentUserId)) {
+          likes.remove(currentUserId);
+          print('User $currentUserId unliked post $postId');
+        } else {
+          likes.add(currentUserId);
+          print('User $currentUserId liked post $postId');
+        }
+        
+        transaction.update(postRef, {'likes': likes});
+      });
+      
+      return null; // Success
+    } catch (e) {
+      print('Error toggling like on post: $e');
+      return 'Failed to update like: ${e.toString()}';
+    }
+  }
+
   // Update user's post count by type
   Future<void> _updateUserPostCountByType(String userId, String userType) async {
     try {

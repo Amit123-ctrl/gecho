@@ -5,6 +5,7 @@ import '../models/post_model.dart';
 import '../services/post_service.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import '../widgets/comments_bottom_sheet.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -19,6 +20,7 @@ class _PostCardState extends State<PostCard> {
   final PostService _postService = PostService();
   final AuthService _authService = AuthService();
   bool _isLiked = false;
+  bool _isExpanded = false;
   UserModel? _currentUser;
 
   @override
@@ -44,16 +46,49 @@ class _PostCardState extends State<PostCard> {
 
   void _checkIfLiked() {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _isLiked = widget.post.likes.contains(currentUserId);
+    setState(() {
+      _isLiked = widget.post.likes.contains(currentUserId);
+    });
   }
 
   Future<void> _toggleLike() async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to like posts')),
+      );
+      return;
+    }
+
+    // Optimistic UI update
     setState(() {
       _isLiked = !_isLiked;
     });
 
-    // TODO: Implement like functionality with new post service
-    // await _postService.toggleLike(widget.post.id, currentUserId);
+    // Update in Firestore
+    final error = await _postService.toggleLikeOnPost(widget.post.id, currentUserId);
+    
+    if (error != null) {
+      // Revert on error
+      setState(() {
+        _isLiked = !_isLiked;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+    }
+  }
+
+  void _openComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CommentsBottomSheet(post: widget.post),
+    );
   }
 
   Future<void> _deletePost() async {
@@ -95,15 +130,23 @@ class _PostCardState extends State<PostCard> {
   }
 
   bool get _canDeletePost {
-    if (_currentUser == null) return false;
+    if (_currentUser == null) {
+      print('Cannot delete: _currentUser is null');
+      return false;
+    }
     
-    // Admins can delete club and student posts, but not other admin posts
+    print('Checking delete permission: userType=${_currentUser!.userType}, uid=${_currentUser!.uid}, postAuthorId=${widget.post.authorId}');
+    
+    // Admins can delete ANY post (including their own)
     if (_currentUser!.userType == 'admin') {
-      return widget.post.authorType != 'admin';
+      print('User is admin - can delete');
+      return true;
     }
     
     // Users can delete their own posts
-    return _currentUser!.uid == widget.post.authorId;
+    final canDelete = _currentUser!.uid == widget.post.authorId;
+    print('User can delete own post: $canDelete');
+    return canDelete;
   }
 
   bool get _isPriorityActive {
@@ -141,10 +184,36 @@ class _PostCardState extends State<PostCard> {
     }
   }
 
+  String _getInitial() {
+    // Try display name first
+    if (widget.post.authorDisplayName.isNotEmpty) {
+      return widget.post.authorDisplayName[0].toUpperCase();
+    }
+    // Fall back to username
+    if (widget.post.authorUsername.isNotEmpty) {
+      return widget.post.authorUsername[0].toUpperCase();
+    }
+    // Last resort
+    return '?';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    // Get full content for blog posts
+    String fullContent = widget.post.isBlog && widget.post.blogContent != null
+        ? widget.post.blogContent!
+        : widget.post.caption;
+    
+    // Determine if content needs truncation (only if longer than 200 chars)
+    const int maxLength = 200;
+    bool needsTruncation = fullContent.length > maxLength;
+    String displayContent = _isExpanded || !needsTruncation
+        ? fullContent
+        : '${fullContent.substring(0, maxLength)}...';
+
+    return Container(
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -182,44 +251,74 @@ class _PostCardState extends State<PostCard> {
               ),
             ),
 
-          // Header
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: widget.post.authorProfileImage != null
-                  ? CachedNetworkImageProvider(widget.post.authorProfileImage!)
-                  : null,
-              child: widget.post.authorProfileImage == null
-                  ? Text(widget.post.authorDisplayName[0].toUpperCase())
-                  : null,
-            ),
-            title: Row(
+          // Header - Author info
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
               children: [
-                Text(
-                  widget.post.authorDisplayName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                // Profile picture
+                CircleAvatar(
+                  radius: 18,
+                  backgroundImage: widget.post.authorProfileImage != null
+                      ? CachedNetworkImageProvider(widget.post.authorProfileImage!)
+                      : null,
+                  child: widget.post.authorProfileImage == null
+                      ? Text(
+                          _getInitial(),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
-                const SizedBox(width: 8),
-                // User type badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _getUserTypeColor(widget.post.authorType),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    widget.post.authorType.toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
+                const SizedBox(width: 10),
+                // Username and role
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            widget.post.authorDisplayName.isNotEmpty 
+                                ? widget.post.authorDisplayName 
+                                : widget.post.authorUsername,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // User type badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getUserTypeColor(widget.post.authorType),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              widget.post.authorType.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '@${widget.post.authorUsername}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-            subtitle: Text('@${widget.post.authorUsername}'),
-            trailing: _canDeletePost
-                ? PopupMenuButton<String>(
+                // More options
+                if (_canDeletePost)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, size: 20),
                     onSelected: (value) {
                       if (value == 'delete') {
                         _deletePost();
@@ -230,7 +329,7 @@ class _PostCardState extends State<PostCard> {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete, color: Colors.red),
+                            Icon(Icons.delete, color: Colors.red, size: 20),
                             SizedBox(width: 8),
                             Text('Delete Post', style: TextStyle(color: Colors.red)),
                           ],
@@ -238,163 +337,185 @@ class _PostCardState extends State<PostCard> {
                       ),
                     ],
                   )
-                : IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No actions available')),
-                      );
-                    },
-                  ),
+                else
+                  const SizedBox(width: 8),
+              ],
+            ),
           ),
 
-          // Image (for photo posts or blog cover)
+          // Image - Full width, no rounded corners
           if (widget.post.imageUrl != null)
-            GestureDetector(
-              onTap: () {
-                // Navigate to post detail (placeholder)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Post detail view coming soon!')),
-                );
-              },
-              child: CachedNetworkImage(
-                imageUrl: widget.post.imageUrl!,
-                width: double.infinity,
-                height: widget.post.isPhoto ? 300 : 200,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  height: widget.post.isPhoto ? 300 : 200,
-                  color: Colors.grey[300],
-                  child: const Center(child: CircularProgressIndicator()),
+            CachedNetworkImage(
+              imageUrl: widget.post.imageUrl!,
+              width: double.infinity,
+              height: 400,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                height: 400,
+                color: Colors.grey[200],
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              errorWidget: (context, url, error) => Container(
+                height: 400,
+                color: Colors.grey[200],
+                child: const Center(child: Icon(Icons.error)),
+              ),
+            ),
+
+          // Action buttons - Like, Comment
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: _isLiked ? Colors.red : Colors.black87,
+                    size: 28,
+                  ),
+                  onPressed: _toggleLike,
                 ),
-                errorWidget: (context, url, error) => Container(
-                  height: widget.post.isPhoto ? 300 : 200,
-                  color: Colors.grey[300],
-                  child: const Center(child: Icon(Icons.error)),
+                IconButton(
+                  icon: const Icon(
+                    Icons.mode_comment_outlined,
+                    color: Colors.black87,
+                    size: 26,
+                  ),
+                  onPressed: _openComments,
+                ),
+              ],
+            ),
+          ),
+
+          // Like count
+          if (widget.post.likes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '${widget.post.likes.length} ${widget.post.likes.length == 1 ? 'like' : 'likes'}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
                 ),
               ),
             ),
 
-          // Content
+          // Caption/Content with expandable text
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Post type indicator
+                // Blog post indicator
                 if (widget.post.isBlog)
                   Container(
+                    margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.blue[100],
+                      color: Colors.blue[50],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
                       'Blog Post',
                       style: TextStyle(
                         color: Colors.blue,
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
 
-                if (widget.post.isBlog) const SizedBox(height: 8),
-
                 // Caption/Title
-                Text(
-                  widget.post.caption,
-                  style: TextStyle(
-                    fontSize: widget.post.isBlog ? 18 : 14,
-                    fontWeight: widget.post.isBlog ? FontWeight.bold : FontWeight.normal,
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: '${widget.post.authorDisplayName.isNotEmpty ? widget.post.authorDisplayName : widget.post.authorUsername} ',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      TextSpan(text: displayContent),
+                    ],
                   ),
                 ),
 
-                // Blog preview
-                if (widget.post.isBlog && widget.post.blogContent != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.post.blogContent!.length > 150
-                        ? '${widget.post.blogContent!.substring(0, 150)}...'
-                        : widget.post.blogContent!,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      // Navigate to post detail (placeholder)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Read more coming soon!')),
-                      );
+                // Read more / Show less button
+                if (needsTruncation)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
                     },
-                    child: const Text('Read more'),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        _isExpanded ? 'Show less' : 'Read more',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
-                ],
 
                 // Tags
                 if (widget.post.tags.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
+                    runSpacing: 4,
                     children: widget.post.tags.map((tag) {
                       return Text(
                         '#$tag',
-                        style: const TextStyle(
-                          color: Colors.blue,
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       );
                     }).toList(),
                   ),
                 ],
-
-                const SizedBox(height: 8),
-
-                // Timestamp
-                Text(
-                  _formatTimestamp(widget.post.createdAt.millisecondsSinceEpoch),
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
               ],
             ),
           ),
 
-          // Actions
+          // Comment count and timestamp
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: Icon(
-                    _isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: _isLiked ? Colors.red : null,
+                if (widget.post.commentCount > 0)
+                  GestureDetector(
+                    onTap: _openComments,
+                    child: Text(
+                      'View all ${widget.post.commentCount} ${widget.post.commentCount == 1 ? 'comment' : 'comments'}',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                  onPressed: _toggleLike,
-                ),
-                Text('${widget.post.likes.length}'),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.comment_outlined),
-                  onPressed: () {
-                    // Navigate to post detail (placeholder)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Comments coming soon!')),
-                    );
-                  },
-                ),
-                Text('${widget.post.commentCount}'),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  onPressed: () {
-                    // Share functionality
-                  },
+                const SizedBox(height: 4),
+                Text(
+                  _formatTimestamp(widget.post.createdAt.millisecondsSinceEpoch).toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
           ),
+
+          const SizedBox(height: 12),
         ],
       ),
     );

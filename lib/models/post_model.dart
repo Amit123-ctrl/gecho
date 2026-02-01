@@ -38,6 +38,15 @@ class Post {
   });
 
   factory Post.fromMap(Map<String, dynamic> map, String id) {
+    // Handle likes field - can be either int (old format) or List<String> (new format)
+    List<String> parsedLikes = [];
+    if (map['likes'] != null) {
+      if (map['likes'] is List) {
+        parsedLikes = List<String>.from(map['likes']);
+      }
+      // If it's an int (old format), just ignore it and start fresh with empty list
+    }
+
     return Post(
       id: id,
       authorId: map['authorId'] ?? '',
@@ -52,7 +61,7 @@ class Post {
       imageUrl: map['imageUrl'],
       caption: map['caption'] ?? '',
       blogContent: map['blogContent'],
-      likes: List<String>.from(map['likes'] ?? []),
+      likes: parsedLikes,
       commentCount: map['commentCount'] ?? 0,
       tags: List<String>.from(map['tags'] ?? []),
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),

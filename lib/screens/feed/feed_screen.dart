@@ -19,32 +19,12 @@ class _FeedScreenState extends State<FeedScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'University Portal',
+          'G\'echo',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // Activity/notifications screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications coming soon!')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () {
-              // Messages screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Messages coming soon!')),
-              );
-            },
-          ),
-        ],
       ),
       body: StreamBuilder<List<Post>>(
         stream: _postService.getPosts(),
@@ -55,7 +35,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
           if (snapshot.hasError) {
             print('Feed error: ${snapshot.error}');
-            return _buildEmptyState('Welcome to University Portal!');
+            return _buildEmptyState('Welcome to G\'echo!');
           }
 
           final posts = snapshot.data ?? [];
@@ -69,9 +49,21 @@ class _FeedScreenState extends State<FeedScreen> {
               setState(() {});
             },
             child: ListView.builder(
+              padding: EdgeInsets.zero,
               itemCount: posts.length,
+              physics: const AlwaysScrollableScrollPhysics(),
               itemBuilder: (context, index) {
-                return PostCard(post: posts[index]);
+                // Safety check to prevent RangeError
+                if (index >= posts.length) {
+                  return const SizedBox.shrink();
+                }
+                
+                try {
+                  return PostCard(post: posts[index]);
+                } catch (e) {
+                  print('Error rendering post at index $index: $e');
+                  return const SizedBox.shrink();
+                }
               },
             ),
           );
