@@ -183,6 +183,21 @@ class PostService {
             .toList());
   }
 
+  // Get posts by specific user and post type (photo or blog)
+  Stream<List<Post>> getUserPostsByPostType(String userId, String userType, PostType postType) {
+    final collection = _getCollectionName(userType);
+    return _firestore
+        .collection(collection)
+        .doc(userId)
+        .collection('posts')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Post.fromMap(doc.data(), doc.id))
+            .where((post) => post.type == postType)
+            .toList());
+  }
+
   // Get posts by specific user (legacy - tries all collections)
   Stream<List<Post>> getUserPosts(String userId) {
     // Try to find user in each collection and return their posts

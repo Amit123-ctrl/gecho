@@ -63,12 +63,25 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_getErrorMessage(e.toString())),
-            backgroundColor: Colors.red,
-          ),
-        );
+        final errorMessage = e.toString();
+        
+        // Check if this is a restriction error
+        if (errorMessage.contains('RESTRICTED|')) {
+          final parts = errorMessage.split('|');
+          if (parts.length >= 3) {
+            final restrictedUntil = DateTime.parse(parts[1]);
+            final reason = parts[2];
+            
+            _showRestrictionDialog(restrictedUntil, reason);
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_getErrorMessage(errorMessage)),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -77,6 +90,58 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  void _showRestrictionDialog(DateTime until, String reason) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.block, color: Colors.red.shade600),
+            const SizedBox(width: 8),
+            const Text('Account Restricted'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your account has been restricted by an administrator.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Text('Restricted until: ${_formatDate(until)}'),
+            const SizedBox(height: 8),
+            Text('Reason: $reason'),
+            const SizedBox(height: 16),
+            Text(
+              'Please contact the administration if you believe this is an error.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   String _getErrorMessage(String error) {

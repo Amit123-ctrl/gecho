@@ -30,6 +30,11 @@ class UserModel {
   final int followingCount;
   final int postsCount;
 
+  // Restriction fields
+  final bool isRestricted;
+  final DateTime? restrictedUntil;
+  final String? restrictionReason;
+
   UserModel({
     required this.uid,
     required this.email,
@@ -53,6 +58,9 @@ class UserModel {
     this.followersCount = 0,
     this.followingCount = 0,
     this.postsCount = 0,
+    this.isRestricted = false,
+    this.restrictedUntil,
+    this.restrictionReason,
   });
 
   // Create UserModel from Firestore document
@@ -84,6 +92,9 @@ class UserModel {
       followersCount: data['followersCount'] ?? 0,
       followingCount: data['followingCount'] ?? 0,
       postsCount: data['postsCount'] ?? 0,
+      isRestricted: data['isRestricted'] ?? false,
+      restrictedUntil: (data['restrictedUntil'] as Timestamp?)?.toDate(),
+      restrictionReason: data['restrictionReason'],
     );
   }
 
@@ -99,6 +110,7 @@ class UserModel {
       'followersCount': followersCount,
       'followingCount': followingCount,
       'postsCount': postsCount,
+      'isRestricted': isRestricted,
     };
 
     // Add optional fields if they exist
@@ -107,6 +119,8 @@ class UserModel {
     if (photoURL != null) data['photoURL'] = photoURL;
     if (bio != null) data['bio'] = bio;
     if (lastActive != null) data['lastActive'] = Timestamp.fromDate(lastActive!);
+    if (restrictedUntil != null) data['restrictedUntil'] = Timestamp.fromDate(restrictedUntil!);
+    if (restrictionReason != null) data['restrictionReason'] = restrictionReason;
     
     // Student-specific fields
     if (studentId != null) data['studentId'] = studentId;
@@ -146,6 +160,9 @@ class UserModel {
     int? followersCount,
     int? followingCount,
     int? postsCount,
+    bool? isRestricted,
+    DateTime? restrictedUntil,
+    String? restrictionReason,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -170,6 +187,9 @@ class UserModel {
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       postsCount: postsCount ?? this.postsCount,
+      isRestricted: isRestricted ?? this.isRestricted,
+      restrictedUntil: restrictedUntil ?? this.restrictedUntil,
+      restrictionReason: restrictionReason ?? this.restrictionReason,
     );
   }
 

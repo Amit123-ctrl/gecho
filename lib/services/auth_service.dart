@@ -51,14 +51,24 @@ class AuthService {
       
       print('User found: ${userData['name']}');
       
-      // Step 3: Check password
+      // Step 3: Check if user is restricted
+      final isRestricted = userData['isRestricted'] as bool? ?? false;
+      if (isRestricted) {
+        final restrictedUntil = (userData['restrictedUntil'] as Timestamp?)?.toDate();
+        if (restrictedUntil != null && restrictedUntil.isAfter(DateTime.now())) {
+          final reason = userData['restrictionReason'] as String?;
+          throw Exception('RESTRICTED|${restrictedUntil.toIso8601String()}|${reason ?? 'No reason provided'}');
+        }
+      }
+      
+      // Step 4: Check password
       if (userData['password'] != password) {
         throw Exception('Incorrect password');
       }
       
       print('Password correct');
       
-      // Step 4: Create Firebase Auth user for app navigation
+      // Step 5: Create Firebase Auth user for app navigation
       firebase_auth.UserCredential authResult;
       
       final tempPassword = dotenv.env['FIREBASE_TEMP_PASSWORD'] ?? 'TempPass123!';
@@ -81,7 +91,7 @@ class AuthService {
         }
       }
       
-      // Step 5: Create user model
+      // Step 6: Create user model
       final user = UserModel(
         uid: authResult.user!.uid,
         email: userData['email'] ?? email,
@@ -97,7 +107,7 @@ class AuthService {
         clubType: userData['clubType'],
       );
       
-      // Step 6: Store in main users collection
+      // Step 7: Store in main users collection
       await _firestore.collection('users').doc(authResult.user!.uid).set(user.toFirestore());
       
       print('Login successful for ${user.email}');
