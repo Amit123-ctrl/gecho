@@ -116,11 +116,26 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
           ],
         ),
         const SizedBox(height: 12),
-        _buildStatCard(
-          'Admins',
-          _userStats!['admins'] ?? 0,
-          Icons.admin_panel_settings,
-          Colors.orange,
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Admins',
+                _userStats!['admins'] ?? 0,
+                Icons.admin_panel_settings,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Total Users',
+                _userStats!['totalUsers'] ?? 0,
+                Icons.people,
+                Colors.purple,
+              ),
+            ),
+          ],
         ),
       ],
     );

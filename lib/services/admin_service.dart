@@ -25,14 +25,19 @@ class AdminService {
       final clubsSnapshot = await _firestore.collection('club_users').get();
       final adminsSnapshot = await _firestore.collection('admin_users').get();
 
+      final totalUsers = studentsSnapshot.docs.length + 
+                        clubsSnapshot.docs.length + 
+                        adminsSnapshot.docs.length;
+
       return {
         'students': studentsSnapshot.docs.length,
         'clubs': clubsSnapshot.docs.length,
         'admins': adminsSnapshot.docs.length,
+        'totalUsers': totalUsers,
       };
     } catch (e) {
       print('Error getting user stats: $e');
-      return {'students': 0, 'clubs': 0, 'admins': 0};
+      return {'students': 0, 'clubs': 0, 'admins': 0, 'totalUsers': 0};
     }
   }
 
