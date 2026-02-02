@@ -137,26 +137,13 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Student Posts',
-                _postStats!['studentPosts'] ?? 0,
-                Icons.photo_library,
-                Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
                 'Club Posts',
                 _postStats!['clubPosts'] ?? 0,
                 Icons.photo_library,
                 Colors.green,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
+            const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
                 'Admin Posts',
@@ -165,16 +152,14 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                 Colors.orange,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'Total Posts',
-                _postStats!['totalPosts'] ?? 0,
-                Icons.collections,
-                Colors.purple,
-              ),
-            ),
           ],
+        ),
+        const SizedBox(height: 12),
+        _buildStatCard(
+          'Total Posts',
+          _postStats!['totalPosts'] ?? 0,
+          Icons.collections,
+          Colors.purple,
         ),
       ],
     );

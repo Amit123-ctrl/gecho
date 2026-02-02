@@ -36,38 +36,41 @@ class AdminService {
     }
   }
 
-  // Get post statistics by category
+  // Get post statistics by category (excluding student posts)
   Future<Map<String, int>> getPostStats() async {
     try {
       final postsSnapshot = await _firestore.collection('posts').get();
       
-      int studentPosts = 0;
       int clubPosts = 0;
       int adminPosts = 0;
       int totalComments = 0;
+      int totalPosts = 0;
 
       for (var doc in postsSnapshot.docs) {
         final data = doc.data();
         final authorType = data['authorType'] as String?;
         
-        if (authorType == 'student') studentPosts++;
-        else if (authorType == 'club') clubPosts++;
-        else if (authorType == 'admin') adminPosts++;
+        // Only count club and admin posts (students can't post)
+        if (authorType == 'club') {
+          clubPosts++;
+          totalPosts++;
+        } else if (authorType == 'admin') {
+          adminPosts++;
+          totalPosts++;
+        }
 
         totalComments += (data['commentCount'] as int?) ?? 0;
       }
 
       return {
-        'studentPosts': studentPosts,
         'clubPosts': clubPosts,
         'adminPosts': adminPosts,
-        'totalPosts': postsSnapshot.docs.length,
+        'totalPosts': totalPosts,
         'totalComments': totalComments,
       };
     } catch (e) {
       print('Error getting post stats: $e');
       return {
-        'studentPosts': 0,
         'clubPosts': 0,
         'adminPosts': 0,
         'totalPosts': 0,
