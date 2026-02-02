@@ -56,8 +56,6 @@ lib/
 │   │   └── explore_screen.dart # Grid content discovery with blog previews
 │   ├── create/
 │   │   └── create_post_screen.dart # Post creation (photo/blog)
-│   ├── comments/
-│   │   └── comments_screen.dart # Comment viewing interface
 │   └── profile/
 │       ├── profile_screen.dart # User profiles with role-based tabs
 │       ├── analytics_tab.dart  # Admin analytics dashboard
