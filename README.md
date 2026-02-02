@@ -1,6 +1,6 @@
-# 🎓 Gecho - University Portal
+# 🎓 G'echo - University Social Platform
 
-A comprehensive Flutter-based social platform designed specifically for university students and clubs, featuring secure authentication, content sharing, and administrative controls with Firebase backend.
+A comprehensive Flutter-based social platform designed specifically for university students and clubs, featuring secure authentication, content sharing, interactive engagement, and administrative controls with Firebase backend.
 
 ## 🌟 Features
 
@@ -8,20 +8,29 @@ A comprehensive Flutter-based social platform designed specifically for universi
 - 🔐 **Secure Authentication** - University-controlled login system with admin approval
 - 📸 **Photo Sharing** - Upload and share photos with captions and tags using Cloudinary
 - ✍️ **Blog Posts** - Write and publish text-only blog posts with rich content
-- 🏠 **Feed** - Browse posts from students and clubs with priority post support
-- 🔍 **Explore** - Discover content in an optimized grid layout
-- 👤 **Profile** - User profiles with role-based verification
-- ❤️ **Interactions** - Like and comment on posts with real-time updates
+- 🏠 **Feed** - Instagram-style seamless feed with full-width posts
+- 🔍 **Explore** - Discover content in an optimized grid layout with blog previews
+- 👤 **Profile** - User profiles with role-based tabs (Photos | Blogs | Analytics)
+- ❤️ **Interactive Engagement** - Like posts with animated heart button
+- 💬 **Real-time Comments** - Comment on posts with live updates and role badges
+- 🎯 **Interactive Post Details** - Full-screen bottom sheet with swipe-to-close
 - 🏷️ **Tags** - Organize content with hashtags and categories
 - 🎯 **Domain Validation** - Students must use @gla.ac.in emails
 - 🔔 **Admin Priority Posts** - Admins can pin important announcements
 
 ### 🌐 **Admin Panel**
-- 👨‍💼 **Registration Management** - Approve/reject student and club access requests
+- 👨‍💼 **Registration Management** - Three-tab system (Active | Rejected | Expired)
 - ✅ **User Approval System** - Review pending registrations with detailed information
+- 🔍 **Universal Search** - Search across all registration tabs by name or email
 - 📋 **Request Monitoring** - Track registration requests with expiry management
-- 🔍 **User Management** - Monitor approved users across different roles
-- 🚀 **Content Moderation** - Manage posts and user-generated content
+- 🗑️ **Bulk Operations** - Delete all rejected or expired requests
+- 👥 **User Management** - Monitor and restrict users across different roles
+- 🚫 **User Restrictions** - Temporarily restrict users with custom duration and reason
+- 📊 **Analytics Dashboard** - View comprehensive statistics:
+  - User counts by role (Students, Clubs, Admins, Total)
+  - Post counts by role (Club Posts, Admin Posts, Total)
+  - Real-time data with pull-to-refresh
+- 🔍 **User Management Tab** - Search and manage all users with restriction controls
 
 ## 📁 Project Structure
 
@@ -30,32 +39,41 @@ lib/
 ├── main.dart                    # App entry point with Firebase initialization
 ├── firebase_options.dart        # Firebase configuration
 ├── models/
-│   ├── user_model.dart         # University user data model
-│   └── post_model.dart         # Post data model with priority support
+│   ├── user_model.dart         # University user data model with restrictions
+│   ├── post_model.dart         # Post data model with priority support
+│   └── comment_model.dart      # Comment data model with role badges
 ├── screens/
 │   ├── auth/
-│   │   ├── login_screen.dart   # Multi-role authentication
+│   │   ├── login_screen.dart   # Multi-role authentication with restriction check
 │   │   └── registration_screen.dart # User registration requests
 │   ├── admin/
-│   │   └── approval_requests_screen.dart # Admin approval interface
+│   │   └── approval_requests_screen.dart # Three-tab approval system
 │   ├── home/
 │   │   └── home_screen.dart    # Main navigation hub
 │   ├── feed/
-│   │   └── feed_screen.dart    # Posts feed with priority sorting
+│   │   └── feed_screen.dart    # Instagram-style seamless feed
 │   ├── explore/
-│   │   └── explore_screen.dart # Content discovery
+│   │   └── explore_screen.dart # Grid content discovery with blog previews
 │   ├── create/
 │   │   └── create_post_screen.dart # Post creation (photo/blog)
+│   ├── comments/
+│   │   └── comments_screen.dart # Comment viewing interface
 │   └── profile/
-│       └── profile_screen.dart # User profiles
+│       ├── profile_screen.dart # User profiles with role-based tabs
+│       ├── analytics_tab.dart  # Admin analytics dashboard
+│       └── user_management_tab.dart # User management interface
 ├── services/
 │   ├── auth_service.dart       # Authentication & role management
-│   ├── registration_service.dart # Registration workflow
+│   ├── registration_service.dart # Registration workflow with status
 │   ├── post_service.dart       # Post management with Cloudinary
+│   ├── comment_service.dart    # Comment management with permissions
+│   ├── admin_service.dart      # Admin operations and statistics
 │   └── image_service.dart      # Cloudinary image handling
 └── widgets/
-    ├── post_card.dart         # Post display component
-    └── post_grid_item.dart    # Grid layout component
+    ├── post_card.dart          # Instagram-style post display
+    ├── post_grid_item.dart     # Grid layout with blog preview
+    ├── post_detail_bottom_sheet.dart # Interactive post detail view
+    └── comments_bottom_sheet.dart # Comment section widget
 
 firebase.json                   # Firebase project configuration
 firestore.rules                 # Database security rules
@@ -232,6 +250,42 @@ Updated Firestore security rules provide:
 
 ## 🆕 Recent Updates & Fixes
 
+### ✅ **Version 3.0 - Interactive Engagement & Enhanced UI**
+
+**🎨 UI/UX Improvements:**
+- **Instagram-Style Feed**: Seamless full-width posts with no card borders
+- **Interactive Post Details**: Full-screen bottom sheet with swipe-to-close gesture
+- **Animated Like Button**: Heart animation with red fill when liked
+- **Blog Content Preview**: First 3 lines of blog content visible in explore grid
+- **Role-Based Tabs**: Profile tabs based on user role (Photos | Blogs | Analytics)
+- **Expandable Text**: Inline "Read more/Show less" for long captions
+
+**💬 Comment System:**
+- **Real-time Comments**: Live comment updates with StreamBuilder
+- **Role Badges**: Visual badges for Student 🎓, Club 🏛️, Admin 👨‍💼
+- **Comment Ownership**: Users can delete their own comments
+- **Admin Moderation**: Admins can delete any comment
+- **Comment Input**: Fixed bottom input field with send button
+
+**👥 User Management:**
+- **User Restrictions**: Admins can temporarily restrict users
+- **Restriction Reasons**: Custom reason and duration for restrictions
+- **Login Restriction Check**: Shows dialog with reason and duration on login
+- **User Management Tab**: Search and manage all users with restriction controls
+
+**📊 Analytics Dashboard:**
+- **User Statistics**: Students, Clubs, Admins, Total Users count
+- **Post Statistics**: Club Posts, Admin Posts, Total Posts (students excluded)
+- **Pull-to-Refresh**: Real-time data updates
+- **Color-Coded Cards**: Visual distinction for different metrics
+
+**🔧 Registration System:**
+- **Three-Tab System**: Active (Green), Rejected (Orange), Expired (Red)
+- **Universal Search**: Search across all tabs by name or email
+- **Bulk Delete**: Delete all rejected or expired requests
+- **Rejection Metadata**: Shows who rejected, when, and why
+- **Status Tracking**: Single collection with status field
+
 ### ✅ **Version 2.0 - Major Stability Update**
 
 **🔧 Critical Fixes:**
@@ -282,23 +336,28 @@ Updated Firestore security rules provide:
 - Full-screen reading view optimized for mobile devices
 
 ### 👤 User Profiles
-- **Student Profiles** - Display student ID, department, and year
-- **Club Profiles** - Show club name, type, and member count
-- University verification badges for authenticated users
-- Post grid view with engagement statistics
-- Profile statistics including followers and university role
+- **Student Profiles** - Display student ID, department, and year (no posting)
+- **Club Profiles** - Show club name, type with Photos and Blogs tabs
+- **Admin Profiles** - Full access with Photos, Blogs, and Analytics tabs
+- **Profile Grid** - Posts displayed in grid layout with click-to-view
+- **Post Statistics** - Dynamic post count by type
+- **Interactive Details** - Click posts to open full-screen bottom sheet
 
 ### ❤️ Interactions
-- Like/unlike posts with university community engagement
-- Comment system with moderation capabilities
-- Share functionality for university events and announcements
-- Tag system for organizing university content
+- **Like System**: Animated heart button with red fill when liked
+- **Real-time Comments**: Live comment updates with role badges
+- **Comment Ownership**: Users can delete their own comments
+- **Admin Moderation**: Admins can delete any comment
+- **Interactive Post Details**: Full-screen bottom sheet with swipe-to-close
+- **Tag System**: Organize university content with hashtags
 
 ### 🌐 Web Admin Panel
-- **User Management** - Approve/reject student and club registrations
+- **Registration Management** - Three-tab system (Active | Rejected | Expired)
+- **Universal Search** - Search across all tabs by name or email
+- **Bulk Operations** - Delete all rejected or expired requests
+- **User Management** - Search and restrict users with custom duration
+- **Analytics Dashboard** - Comprehensive statistics with pull-to-refresh
 - **Content Moderation** - Monitor posts and comments for university guidelines
-- **Analytics Dashboard** - View platform usage and engagement metrics
-- **Bulk Operations** - Manage multiple users and content efficiently
 
 ## 📦 Dependencies
 
@@ -451,10 +510,12 @@ The following files are excluded from version control for security:
 - **Tag System**: Organize content by categories and topics
 
 ### Administrative Features
-- **Registration Management**: Review and approve user requests
-- **User Monitoring**: Track approved users and their activity
+- **Registration Management**: Three-tab system with universal search
+- **User Restrictions**: Temporarily restrict users with custom duration and reason
+- **Analytics Dashboard**: Comprehensive statistics (users, posts, engagement)
+- **User Management Tab**: Search and manage all users with restriction controls
 - **Content Oversight**: Monitor posts and user interactions
-- **Bulk Operations**: Manage multiple users efficiently
+- **Bulk Operations**: Delete all rejected or expired requests efficiently
 
 ## 🤝 Contributing
 
@@ -517,8 +578,8 @@ This project is developed for educational purposes and university use.
 
 ---
 
-**🎓 Gecho - Connecting University Students & Clubs**
+**🎓 G'echo - Connecting University Students & Clubs**
 
 *Built with Flutter & Firebase for GLA University*
 
-**Latest Update**: Version 2.0 - Major stability and performance improvements
+**Latest Update**: Version 3.0 - Interactive engagement with Instagram-style UI and enhanced admin controls
